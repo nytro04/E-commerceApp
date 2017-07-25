@@ -1,7 +1,14 @@
 package database
 
-import "database/sql"
-
+import (
+	"database/sql"
+	
+	_ "github.com/lib/pq"
+	
+	"github.com/nytro04/nytroshop/items"
+	"github.com/nytro04/nytroshop/users"
+)
+	
 type ItemDB interface {
 	CreateItem(item items.Item) (int64, error)
 	GetItemByID(id int64) (*items.Item, error)
@@ -15,7 +22,7 @@ type UserDB interface {
 	CreateUser(user *users.User) (int64, error)
 	GetUserByID(id int64) (*users.User, error)
 	GetUserByName(name string) (*users.User, error)
-	GetAllUsers() ([]*users.Users, error)
+	GetAllUsers() ([]*users.User, error)
 	UpdateUser(user *users.User) error
 	RemoveUser(id int64) error
 }
@@ -23,6 +30,7 @@ type UserDB interface {
 type DB interface {
 	ItemDB
 	UserDB
+	Close() error
 }
 
 type postgresDB struct {
@@ -41,13 +49,13 @@ func New(conn string) (DB, error) {
 		return nil, err
 	}
 
-	pg = &postgresDB{db: db}
+	pg := &postgresDB{db: db}
 	err = pg.ensureTables()
 
 	return pg, err
 }
 
-func (db *postgreDB) ensureTables() error {
+func (db *postgresDB) ensureTables() error {
 	_, err := db.db.Exec("CREATE TABLE IF NOT EXISTS items (id SERIAL, name TEXT, price NUMERIC);")
 	if err != nil {
 		return err
@@ -57,30 +65,32 @@ func (db *postgreDB) ensureTables() error {
 	return err
 }
 
-func (db *postgreDB) CreateItem(item items.Item) (int64, error) {
-	result, err := db.db.Exec("INSERT INTO items (name, price) VALUES ($1, $2);", item.Name, item.Price)
+func (db *postgresDB) Close() error {
+	return db.db.Close()
+}
+
+func (db *postgresDB) CreateItem(item items.Item) (int64, error) {
+	result, err := db.db.Exec("INSERT INTO items (name, price) VALUES ($1, $2);", item.Name, item.PriceInCents)
 	if err != nil {
 		return 0, err
 	}
-	return resule.LastInsertId()
+	return result.LastInsertId()
 }
 
-func (db *postgreDB) GetItemByID(id int64) (*items.Item, error) {
-	row, err := db.db.QueryRow("SELECT id, name, price FROM items WHERE id= $1;", id)
-	if err != nil {
-		return nil, err
-	}
+func (db *postgresDB) GetItemByID(id int64) (*items.Item, error) {
+	row := db.db.QueryRow("SELECT id, name, price FROM items WHERE id= $1;", id)
+
 	i := new(items.Item)
-	err = row.Scan(&i.ID, &i.Name, &i.PriceInCents)
+	err := row.Scan(&i.ID, &i.Name, &i.PriceInCents)
 	return i, err
 }
 
-func (db *postgreDB) GetItemsByName(name string) ([]*items.Item, error) {
+func (db *postgresDB) GetItemsByName(name string) ([]*items.Item, error) {
 	rows, err := db.db.Query("SELECT id, name, price FROM items WHERE name= $1;", name)
 	if err != nil {
 		return nil, err
 	}
-	var itemsSlice *items.Item
+	var itemsSlice []*items.Item
 	for rows.Next() {
 		i := new(items.Item)
 		err = rows.Scan(&i.ID, &i.Name, &i.PriceInCents)
@@ -89,7 +99,7 @@ func (db *postgreDB) GetItemsByName(name string) ([]*items.Item, error) {
 	return itemsSlice, err
 }
 
-func (db *postgreDB) GetAllItems() ([]*items.Item, error) {
+func (db *postgresDB) GetAllItems() ([]*items.Item, error) {
 	rows, err := db.db.Query("SELECT id, name, price FROM items")
 	if err != nil {
 		return nil, err
@@ -98,18 +108,18 @@ func (db *postgreDB) GetAllItems() ([]*items.Item, error) {
 	for rows.Next() {
 		i := new(items.Item)
 		err = rows.Scan(&i.ID, &i.Name, &i.PriceInCents)
-		allItemsSlice = append(allItemSlice, i)
+		allItemsSlice = append(allItemsSlice, i)
 	}
 	return allItemsSlice, err
 }
 
-func (db *postgreDB) UpdateItem(item *items.Item) error {
+func (db *postgresDB) UpdateItem(item *items.Item) error {
 	_, err := db.db.Exec("UPDATE items SET name = $2, price = $3 WHERE id = $1;", item.ID, item.Name, item.PriceInCents)
 	return err
 
 }
 
-func (db *postgreDB) RemoveItem(id int64) error {
+func (db *postgresDB) RemoveItem(id int64) error {
 	_, err := db.db.Exec("DELETE FROM items WHERE id=$1;", id)
 	return err
 }
@@ -120,30 +130,26 @@ func (db *postgresDB) CreateUser(user *users.User) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return result.LastInsertId(), nil
+	return result.LastInsertId()
 }
 
 func (db *postgresDB) GetUserByID(id int64) (*users.User, error) {
-	row, err := db.db.QueryRow("SELECT id, name, hash, address FROM users WHERE id=$1;", id)
-	if err != nil {
-		return nil, err
-	}
+	row := db.db.QueryRow("SELECT id, name, hash, address FROM users WHERE id=$1;", id)
+
 	i := new(users.User)
-	err = row.Scan(&i.ID, &i.Name, &i.Hash, &i.Address)
+	err := row.Scan(&i.ID, &i.Name, &i.Hash, &i.Address)
 	return i, err
 }
 
 func (db *postgresDB) GetUserByName(name string) (*users.User, error) {
-	row, err := db.db.QueryRow("SELECT id, name, hash, address FROM users WHERE name=$1;", name)
-	if err != nil {
-		return nil, err
-	}
+	row := db.db.QueryRow("SELECT id, name, hash, address FROM users WHERE name=$1;", name)
+
 	i := new(users.User)
-	err = row.Scan(&i.ID, &i.Name, &i.Hash, &i.Address)
+	err := row.Scan(&i.ID, &i.Name, &i.Hash, &i.Address)
 	return i, err
 }
 
-func (db *postgresDB) GetAllUsers() ([]*users.Users, error) {
+func (db *postgresDB) GetAllUsers() ([]*users.User, error) {
 	rows, err := db.db.Query("SELECT id, name, hash, address FROM users")
 	if err != nil {
 		return nil, err
