@@ -10,7 +10,7 @@ import (
 )
 	
 type ItemDB interface {
-	CreateItem(item items.Item) (int64, error)
+	CreateItem(item *items.Item) (int64, error)
 	GetItemByID(id int64) (*items.Item, error)
 	GetItemsByName(name string) ([]*items.Item, error)
 	GetAllItems() ([]*items.Item, error)
@@ -69,13 +69,13 @@ func (db *postgresDB) Close() error {
 	return db.db.Close()
 }
 
-func (db *postgresDB) CreateItem(item items.Item) (int64, error) {
+func (db *postgresDB) CreateItem(item *items.Item) (int64, error) {
 	result, err := db.db.Exec("INSERT INTO items (name, price) VALUES ($1, $2);", item.Name, item.PriceInCents)
 	if err != nil {
 		return 0, err
 	}
 	return result.LastInsertId()
-}
+} 
 
 func (db *postgresDB) GetItemByID(id int64) (*items.Item, error) {
 	row := db.db.QueryRow("SELECT id, name, price FROM items WHERE id= $1;", id)

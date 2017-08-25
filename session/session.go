@@ -26,19 +26,21 @@ func NewSessionStore() *SessionStore {
 }
 
 // RequestSession retrieves an existing session from the session store or creates one when none is found. It returns an error when no session could be created.
-func (s *SessionStore) RequestSession(sessionID string) (*Session, error) {
-	s.m.RLock()
-	sess, ok := s.sessions[sessionID]
-	s.m.RUnlock()
-	
-	if !ok {
-		sess = s.CreateSession(0)
-	}
-	
-	if sess == nil {
-		return nil, errors.New("session: Could not find free session ID")
-	}
-	return sess, nil
+func (s *SessionStore) RequestSession(sessionID string) (*Session, bool, error) {
+    s.m.RLock()
+    sess, ok := s.sessions[sessionID]
+    s.m.RUnlock()
+
+    var isNew bool
+    if !ok {
+        sess = s.CreateSession(0)
+        isNew = true
+    }
+    
+    if sess == nil {
+        return nil, false, errors.New("session: Could not find free session ID")
+    }
+    return sess, isNew, nil
 }
 
 const randomChars = "abcdefghijklmnopqrstuvwsyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"

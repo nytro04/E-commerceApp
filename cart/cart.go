@@ -9,22 +9,20 @@ type Item struct {
 
 type Cart struct {
 
-	UserID uint64
+	UserID int64
 	Items  []*Item
 }
 
 type Manager struct {
 	// Todo
 	m           sync.RWMutex
-	sessionCart map[SessionID]*Cart
-	userCart    map[UserID]*Cart
+	sessionCart map[string]*Cart
+	userCart    map[int64]*Cart
 }
 
 func New() *Manager {
-	// Todo
-
-	return &Manager{sessionCart: make(map[SessionID]*Cart),
-		userCart: make(map[UserID]*Cart),
+	return &Manager{sessionCart: make(map[string]*Cart),
+		userCart: make(map[int64]*Cart),
 	}
 }
 
@@ -43,10 +41,9 @@ func (m *Manager) createSessionCart(sessionID string) *Cart {
 	m.sessionCart[sessionID] = cart
 
 	return cart
-
 }
 
-func (c *Cart) addItem(itemID int64, quantity int) *Cart {
+func (c *Cart) addItem(itemID int64, quantity int64) {
 	i := findIndex(itemID, c.Items)
 
 
@@ -59,11 +56,11 @@ func (c *Cart) addItem(itemID int64, quantity int) *Cart {
 		c.Items = append(c.Items, item)
 	} else {
 		c.Items[i].Quantity += quantity
-
+	}
 	// ...
 }
 
-func findIndex(itemID int64, items []Item) int {
+func findIndex(itemID int64, items []*Item) int {
 	// Iterate over the items and check each one
 	for i, item := range items {
 		if item.ItemID == itemID {
@@ -76,33 +73,17 @@ func findIndex(itemID int64, items []Item) int {
 }
 
 
-func  MergeCart(dst, src *Cart) *Cart {
-
-
+func  MergeCarts(dst, src *Cart)  {
 	for _, item := range src.Items {
-		dst.AddItem(itme.ItemID, item.Quantity)
+		dst.addItem(item.ItemID, item.Quantity)
 	}
 
 }
 
-
-}
-
-
 func (m *Manager) DeleteCart(userID int64) {
-	deleteCart := &Manager {
-									userCart: make(map[userID]*Cart),
-						}
-	delete(map[userID]*Cart, userID)
-
+	delete(m.userCart, userID)
 }
-
 
 func (m *Manager) DeleteSessionCart(sessionID string) {
-
-	delete(m.userCart, sessionID)
-
+	delete(m.sessionCart, sessionID)
 }
-
-
-
