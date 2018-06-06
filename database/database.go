@@ -2,34 +2,16 @@ package database
 
 import (
 	"database/sql"
-	
+
 	_ "github.com/lib/pq"
-	
-	"github.com/nytro04/nytroshop/items"
+
+	"github.com/nytro04/nytroshopitems"
 	"github.com/nytro04/nytroshop/users"
 )
-	
-type ItemDB interface {
-	CreateItem(item *items.Item) (int64, error)
-	GetItemByID(id int64) (*items.Item, error)
-	GetItemsByName(name string) ([]*items.Item, error)
-	GetAllItems() ([]*items.Item, error)
-	UpdateItem(item *items.Item) error
-	RemoveItem(id int64) error
-}
-
-type UserDB interface {
-	CreateUser(user *users.User) (int64, error)
-	GetUserByID(id int64) (*users.User, error)
-	GetUserByName(name string) (*users.User, error)
-	GetAllUsers() ([]*users.User, error)
-	UpdateUser(user *users.User) error
-	RemoveUser(id int64) error
-}
 
 type DB interface {
-	ItemDB
-	UserDB
+	items.ItemDB
+	users.UserDB
 	Close() error
 }
 
@@ -70,12 +52,21 @@ func (db *postgresDB) Close() error {
 }
 
 func (db *postgresDB) CreateItem(item *items.Item) (int64, error) {
-	result, err := db.db.Exec("INSERT INTO items (name, price) VALUES ($1, $2);", item.Name, item.PriceInCents)
+	result, err := db.db.Prepare("INSERT INTO items (name, price) VALUES ($1, $2) RETURNING id;")
 	if err != nil {
 		return 0, err
 	}
-	return result.LastInsertId()
-} 
+	defer result.Close()
+
+	var lastInsertId int64
+
+	err = result.QueryRow(item.Name, item.PriceInCents).Scan(&lastInsertId)
+	if err != nil {
+		return 0, err
+	}
+
+	return lastInsertId, err
+}
 
 func (db *postgresDB) GetItemByID(id int64) (*items.Item, error) {
 	row := db.db.QueryRow("SELECT id, name, price FROM items WHERE id= $1;", id)
@@ -93,6 +84,7 @@ func (db *postgresDB) GetItemsByName(name string) ([]*items.Item, error) {
 	var itemsSlice []*items.Item
 	for rows.Next() {
 		i := new(items.Item)
+		//check error here...
 		err = rows.Scan(&i.ID, &i.Name, &i.PriceInCents)
 		itemsSlice = append(itemsSlice, i)
 	}
@@ -126,11 +118,18 @@ func (db *postgresDB) RemoveItem(id int64) error {
 
 //user db methods
 func (db *postgresDB) CreateUser(user *users.User) (int64, error) {
-	result, err := db.db.Exec("INSERT INTO users (name, hash, address) VALUES ($1, $2, $3);", user.Name, user.Hash, user.Address)
+	result, err := db.db.Prepare("INSERT INTO users (name, hash, address) VALUES ($1, $2, $3) RETURNING id;")
 	if err != nil {
 		return 0, err
 	}
-	return result.LastInsertId()
+	defer result.Close()
+
+	var lastInsertId int64
+	err = result.QueryRow(user.Name, user.Hash, user.Address).Scan(&lastInsertId)
+	if err != nil {
+		return 0, err
+	}
+	return lastInsertId, err
 }
 
 func (db *postgresDB) GetUserByID(id int64) (*users.User, error) {

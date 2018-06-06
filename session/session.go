@@ -1,9 +1,9 @@
 package session
 
 import (
+	"errors"
 	"math/rand"
 	"sync"
-	"errors"
 	"time"
 )
 
@@ -27,20 +27,20 @@ func NewSessionStore() *SessionStore {
 
 // RequestSession retrieves an existing session from the session store or creates one when none is found. It returns an error when no session could be created.
 func (s *SessionStore) RequestSession(sessionID string) (*Session, bool, error) {
-    s.m.RLock()
-    sess, ok := s.sessions[sessionID]
-    s.m.RUnlock()
+	s.m.RLock()
+	sess, ok := s.sessions[sessionID]
+	s.m.RUnlock()
 
-    var isNew bool
-    if !ok {
-        sess = s.CreateSession(0)
-        isNew = true
-    }
-    
-    if sess == nil {
-        return nil, false, errors.New("session: Could not find free session ID")
-    }
-    return sess, isNew, nil
+	var isNew bool
+	if !ok {
+		sess = s.CreateSession(0)
+		isNew = true
+	}
+
+	if sess == nil {
+		return nil, false, errors.New("session: Could not find free session ID")
+	}
+	return sess, isNew, nil
 }
 
 const randomChars = "abcdefghijklmnopqrstuvwsyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
@@ -75,8 +75,8 @@ func (s *SessionStore) CreateSession(userID uint64) *Session {
 	}
 
 	session := &Session{
-		ID:     id,
-		UserID: userID,
+		ID:      id,
+		UserID:  userID,
 		Expires: time.Now().Add(time.Hour),
 	}
 	s.sessions[id] = session

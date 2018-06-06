@@ -2,14 +2,38 @@ package items
 
 //item properties
 type Item struct {
-	ID           uint64
+	ID           int64
 	Name         string
-	PriceInCents int
+	PriceInCents int64
 }
 
+// item db interface
+type ItemDB interface {
+	CreateItem(*Item) (int64, error)
+	GetItemByID(id int64) (*Item, error)
+	GetItemsByName(name string) ([]*Item, error)
+	GetAllItems() ([]*Item, error)
+	UpdateItem(item *Item) error
+	RemoveItem(id int64) error
+}
+
+//create item func
+func CreateItem(db ItemDB, name string, price int64) (*Item, error) {
+	var err error
+	item := Item{
+		Name:         name,
+		PriceInCents: price,
+	}
+
+	item.ID, err = db.CreateItem(&item)
+	if err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
 
 type ByID []*Item
-
 
 func (by ByID) Len() int {
 	return len(by)
@@ -22,7 +46,6 @@ func (by ByID) Swap(a, b int) {
 func (by ByID) Less(a, b int) bool {
 	return by[a].ID < by[b].ID
 }
-
 
 type ByName []*Item
 
@@ -37,7 +60,6 @@ func (n ByName) Swap(a, b int) {
 func (n ByName) Less(a, b int) bool {
 	return n[a].Name < n[b].Name
 }
-
 
 type ByPrice []*Item
 

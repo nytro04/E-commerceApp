@@ -10,7 +10,7 @@ import (
 	"github.com/nytro04/nytroshop/database"
 	"github.com/nytro04/nytroshop/items"
 	"github.com/nytro04/nytroshop/session"
-	_ "github.com/nytro04/nytroshop/users"
+	"github.com/nytro04/nytroshop/users"
 )
 
 type itemPage struct {
@@ -27,11 +27,21 @@ func main() {
 	sessionStore := session.NewSessionStore()
 
 	log.Println("Connecting to database")
-	db, err := database.New("user=postgres password=superman host=localhost dbname=shop sslmode=disable")
+	db, err := database.New("user=nytro password=superman host=localhost dbname=shop sslmode=disable")
 	if err != nil {
 		log.Fatalf("Error while connecting to the database: %s\n", err)
 	}
 	defer db.Close()
+
+	_, err = users.CreateUser(db, "nytro", "password123", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = items.CreateItem(db, "item1", 50)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	var templates *template.Template
 
@@ -50,7 +60,7 @@ func main() {
 		data := &itemPage{
 			Title: "All Items",
 		}
-		data.Items, err= db.GetAllItems()
+		data.Items, err = db.GetAllItems()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -58,16 +68,10 @@ func main() {
 		templates.ExecuteTemplate(w, "items_list.gohtml", data)
 	})
 
-
-
 	log.Fatalln(http.ListenAndServe(":8007", nil))
 }
-
-
-
-
 
 //	userManager := users.NewManager(db)
 //	sessionManager := sessions.NewManager(db)
 //	cartManager := cart.cartNewManager(db, userManager, sessionManager)
-	//frontend.Start(db, userManager, sessionManager, cartManager)
+//frontend.Start(db, userManager, sessionManager, cartManager)
