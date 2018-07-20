@@ -8,7 +8,6 @@ type Item struct {
 }
 
 type Cart struct {
-
 	UserID int64
 	Items  []*Item
 }
@@ -46,11 +45,10 @@ func (m *Manager) createSessionCart(sessionID string) *Cart {
 func (c *Cart) addItem(itemID int64, quantity int64) {
 	i := findIndex(itemID, c.Items)
 
-
 	if i == -1 {
 		item := &Item{
-			ItemID:    itemID,
-			Quantity:   quantity,
+			ItemID:   itemID,
+			Quantity: quantity,
 		}
 
 		c.Items = append(c.Items, item)
@@ -72,8 +70,7 @@ func findIndex(itemID int64, items []*Item) int {
 	return -1
 }
 
-
-func  MergeCarts(dst, src *Cart)  {
+func MergeCarts(dst, src *Cart) {
 	for _, item := range src.Items {
 		dst.addItem(item.ItemID, item.Quantity)
 	}

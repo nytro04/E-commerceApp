@@ -5,7 +5,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"github.com/nytro04/nytroshopitems"
+	"github.com/nytro04/nytroshop/items"
 	"github.com/nytro04/nytroshop/users"
 )
 
@@ -38,6 +38,7 @@ func New(conn string) (DB, error) {
 }
 
 func (db *postgresDB) ensureTables() error {
+
 	_, err := db.db.Exec("CREATE TABLE IF NOT EXISTS items (id SERIAL, name TEXT, price NUMERIC);")
 	if err != nil {
 		return err

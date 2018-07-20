@@ -5,6 +5,8 @@ type Item struct {
 	ID           int64
 	Name         string
 	PriceInCents int64
+	Description  string
+	Image		string
 }
 
 // item db interface
@@ -18,11 +20,13 @@ type ItemDB interface {
 }
 
 //create item func
-func CreateItem(db ItemDB, name string, price int64) (*Item, error) {
+func CreateItem(db ItemDB, name string, price int64, description, image string,) (*Item, error) {
 	var err error
 	item := Item{
 		Name:         name,
 		PriceInCents: price,
+		Description:	description,
+		Image:		image,
 	}
 
 	item.ID, err = db.CreateItem(&item)
