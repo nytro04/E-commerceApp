@@ -3,24 +3,20 @@ package main
 import (
 	"flag"
 	"fmt"
+	"html/template"
 	"log"
 	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/nytro04/nytroshop/database"
-	handler "github.com/nytro04/nytroshop/handlers"
-	"github.com/nytro04/nytroshop/items"
-	// "github.com/nytro04/nytroshop/users"
+	"github.com/nytro04/nytroshop/handlers"
 )
 
-type itemPage struct {
-	Title string
-	Items []*items.Item
-}
+var Templates *template.Template
 
 func main() {
-	
+
 	var port int
 	flag.IntVar(&port, "p", 8888, "HTTP port")
 	flag.Parse()
@@ -28,7 +24,6 @@ func main() {
 	rand.Seed(time.Now().Unix())
 
 	log.Println("Starting NytroShop")
-
 	log.Println("Creating session manager")
 	// sessionStore := session.NewSessionStore()
 
@@ -38,51 +33,28 @@ func main() {
 		log.Fatalf("Error while connecting to the database: %s\n", err)
 	}
 	defer db.Close()
+	fmt.Println("database ok!!")
+
+	// Loading templates
+	templ, err := Templates.ParseGlob("template/*.gohtml")
+	if err != nil {
+		log.Fatalf("Error parsing templates: %s\n", err)
+	}
+
+	// Initialize handlers
+	fmt.Println("Initializing handlers...")
+	h := handlers.New(db, templ)
+
+	// Set up individuals routes
+	fmt.Println("Setting up routes")
+	mux := http.NewServeMux()
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./templates"))))
+
+	mux.HandleFunc("/", h.ShowAllItems)
 
 	log.Printf("staring the server on port %d\n", port)
-	log.Fatalln(http.ListenAndServe(fmt.Sprintf(":%d", port), handler.New(db)))
+	log.Fatalln(http.ListenAndServe(fmt.Sprintf(":%d", port), mux))
 
-	// _, err = users.CreateUser(db, "nytro", "password123", "")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// _, err = items.CreateItem(db, "item1", 50)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// _, err = items.CreateItem(db, "macbook", 1000)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// 	var templates *template.Template
-
-	// 	templates, err = template.ParseGlob("tmpl/*")
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-
-	// 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("static/"))))
-
-	// 	http.HandleFunc("/", sessionStore.Wrap(func(w http.ResponseWriter, r *http.Request) {
-	// 		w.Write([]byte("hello world"))
-	// 	}))
-
-	// 	http.HandleFunc("/items/all", func(w http.ResponseWriter, _ *http.Request) {
-	// 		data := &itemPage{
-	// 			Title: "All Items",
-	// 		}
-	// 		data.Items, err = db.GetAllItems()
-	// 		if err != nil {
-	// 			log.Fatal(err)
-	// 		}
-
-	// 		templates.ExecuteTemplate(w, "items_list.gohtml", data)
-	// 	})
-
-	// 	log.Fatalln(http.ListenAndServe(":8007", nil))
-	// }
 
 	//	userManager := users.NewManager(db)
 	//	sessionManager := sessions.NewManager(db)

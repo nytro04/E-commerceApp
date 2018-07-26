@@ -1,4 +1,4 @@
-package handler
+package handlers
 
 import (
 	"html/template"
@@ -6,54 +6,37 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
 	"github.com/nytro04/nytroshop/database"
+
 	"github.com/nytro04/nytroshop/items"
 )
 
-// Handler holds a reference to the database
-// and the parsed HTML template in memory
-type Handler struct {
-	DB          database.DB
-	indexTmpl   *template.Template
-	newTmpl     *template.Template
-	datailsTmpl *template.Template
+type Handlers struct {
+	db   database.DB
+	tmpl *template.Template
 }
 
-// New creates the HTTP handler
-func New(db database.DB) http.Handler {
-	h := Handler{
-		DB:          db,
-		indexTmpl:   template.Must(template.ParseFiles("template/index.html")),
-		// newTmpl:     template.Must(template.ParseFiles("template/new.html")),
-		// datailsTmpl: template.Must(template.ParseFiles("template/new.html")),
+func New(db database.DB, tmpl *template.Template) *Handlers {
+	return &Handlers{
+		db:   db,
+		tmpl: tmpl,
 	}
-
-	router := mux.NewRouter()
-	router.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("template/assets"))))
-
-	router.HandleFunc("/", h.ShowAllItems).Methods("GET")
-	// router.HandleFunc("/allItems/{id}", h.ShowItem).Methods("GET")
-	// router.HandleFunc("/checkout", h.CheckOut).Methods("GET")
-
-	return router
 }
 
-//
-func (h *Handler) ShowAllItems(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) ShowAllItems(w http.ResponseWriter, r *http.Request) {
 
-	allItems, err := h.DB.GetAllItems()
+	allItems, err := h.db.GetAllItems()
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.indexTmpl.Execute(w, allItems)
+	w.Header().Set("Content-Type", "text/html;  charset=utf-8")
+	h.tmpl.ExecuteTemplate(w, "index.gohtml", allItems)
 }
 
-func (h *Handler) CreateNewItem(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) CreateNewItem(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
@@ -74,12 +57,12 @@ func (h *Handler) CreateNewItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var err error
-	if item.ID, err = h.DB.CreateItem(item); err != nil {
+	if item.ID, err = h.db.CreateItem(item); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.newTmpl.Execute(w, item)
+	h.tmpl.ExecuteTemplate(w, "new.gohtml", item)
 }
