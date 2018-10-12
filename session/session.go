@@ -43,6 +43,11 @@ func (s *SessionStore) RequestSession(sessionID string) (*Session, bool, error) 
 	return sess, isNew, nil
 }
 
+// randomChars specifies the characters that will be used in the session IDs. Make sure
+// this string consists of 64 ASCII characters. We need to use ASCII characters because
+// the randomString function generates a random index and we don't want it to use only
+// parts of a Unicode rune. The number of characters should always be 2^n so the random
+// function can optimize the generation of the index.
 const randomChars = "abcdefghijklmnopqrstuvwsyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
 
 func randomString(length int) string {
@@ -55,6 +60,9 @@ func randomString(length int) string {
 }
 
 func (s *SessionStore) uniqueID() string {
+	// Only try 1000 times to prevent locking up the session manager.
+	// If we can't find a unique ID, there is something seriously wrong with
+	// the randomness on this system.
 	for i := 0; i < 1000; i++ {
 		id := randomString(32)
 		if _, ok := s.sessions[id]; !ok {
@@ -71,6 +79,7 @@ func (s *SessionStore) CreateSession(userID uint64) *Session {
 
 	id := s.uniqueID()
 	if id == "" {
+		// this is extremely unlikely!
 		return nil
 	}
 
